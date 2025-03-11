@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const { json } = require('body-parser');
 const { object } = require('joi');
 const jwt = require('jsonwebtoken');
+const ProductModel = require('../models/ProductModel')
+// const { merge } = require('../routes/router');
 const ObjectId = mongoose.Types.ObjectId;
 // const { use } = require('../routes/router');
 // const {jwtdestroy} = require('jwt-destroy');
@@ -102,7 +104,7 @@ const update = async (req, res) => {
         const userId = decoded._id; // Extract ID from token        
         var userData= await UserModel.findOne({_id:userId});
         // userName="Praveen";
-        userPhoneNumber=9557042075;
+        // userPhoneNumber=9557042075;
         const reqData = req.body;
         const userName= reqData.username;
         const userMobile= reqData.mobile;
@@ -131,6 +133,81 @@ const update = async (req, res) => {
     }
 };
 
+const createProduct = async (req, res) => {
+    try {
+        console.log("Incoming request for product creation...");
 
+        // Validate token
+        if (!req.headers.authorization) {
+            console.error("Authorization header missing");
+            return res.status(401).json({ message: "Authorization header missing." });
+        }
 
-module.exports = { signup, login, logout, update }
+        const token = req.headers.authorization.split(' ')[1];
+        if (!token) {
+            console.error("Token does not exist");
+            return res.status(401).json({ message: "Token does not exist." });
+        }
+
+        // Verify token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (jwtError) {
+            console.error("JWT Verification failed:", jwtError);
+            return res.status(403).json({ message: "Invalid or expired token." });
+        }
+
+        const user_id = decoded._id;
+        console.log("User ID from token:", user_id);
+
+        // Fetch user data
+        const userData = await UserModel.findById(user_id);
+        if (!userData) {
+            console.error("User not found for ID:", user_id);
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        console.log("User data fetched successfully:", userData);
+
+        // Extract product details
+        const { 
+            product_name, product_image, product_slug, product_brand, 
+            product_price, product_category, product_subcategory, 
+            product_variant, product_description, product_review 
+        } = req.body;
+
+        // Ensure required fields exist
+        if (!product_name || !product_price || !product_category) {
+            console.error("Missing required fields:", { product_name, product_price, product_category });
+            return res.status(400).json({ message: "Missing required fields." });
+        }
+
+        // Create product
+        const newProduct = new ProductModel({
+            name: product_name,
+            image: product_image || null, // Handle optional fields
+            slug: product_slug || null,
+            brand: product_brand || null,
+            price: product_price,
+            category: product_category,
+            subCategory: product_subcategory || null,
+            variant: product_variant || null,
+            description: product_description || null,
+            review: product_review || [],
+            createdBy: user_id
+        });
+
+        // Save product to database
+        const saveData = await newProduct.save();
+        console.log("Product saved successfully:", saveData);
+
+        return res.status(201).json({ message: "Product created successfully!", product: saveData });
+
+    } catch (error) {
+        console.error("Internal Server Error:", error);
+        return res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+};
+
+module.exports = { signup, login, logout, update,createProduct }
