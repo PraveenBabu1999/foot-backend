@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require("mongoose");
 const bcrypt = require('bcrypt');
 const { json } = require('body-parser');
+const UserModel = require('../models/users');
 const { object } = require('joi');
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -45,10 +46,10 @@ const createProduct = async (req, res) => {
         console.log("User data fetched successfully:", userData);
 
         // Extract product details
-        const { 
-            product_name, product_image, product_slug, product_brand, 
-            product_price, product_category, product_subcategory, 
-            product_variant, product_description, product_review 
+        const {
+            product_name, product_image, product_slug, product_brand,
+            product_price, product_category, product_subcategory,
+            product_variant, product_description, product_review
         } = req.body;
 
         // Ensure required fields exist
@@ -116,13 +117,47 @@ const deleteData = async (req, res) => {
     }
 };
 
-const updateProduct = async (req, res) =>{
+const updateProduct = async (req, res) => {
     try {
-        
+        console.log('Request body:', req.body);
+
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ message: "Bad request. No data received." });
+        }
+
+        const productId = req.body._id;
+        console.log('Product ID is:', productId);
+
+        // Validate MongoDB ObjectId
+        if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ message: 'Invalid product ID.' });
+        }
+
+        // Define fields to update
+        const updatedData = { name: req.body.name };
+
+        // Find and update product
+        const updatedProduct = await ProductModel.findByIdAndUpdate(
+            productId,
+            { $set: updatedData },
+            { new: true } // Return the updated document
+        );
+
+        // Check if the product was found
+        if (!updatedProduct) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
+
+        console.log('Updated Product:', updatedProduct);
+
+        return res.status(200).json({ message: "Product updated successfully!", updatedProduct });
     } catch (error) {
-        
+        console.error('Internal server error:', error);
+        return res.status(500).json({ message: 'Internal server error!' });
     }
-}
+};
 
 
-module.exports = {createProduct,deleteData,updateProduct,}
+
+
+module.exports = { createProduct, deleteData, updateProduct, }
