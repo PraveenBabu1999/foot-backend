@@ -3,7 +3,7 @@ const router = express();
 const {signupvalidation,loginvalidation} = require ('../middlewares/register');
 const {authMiddleware} = require ("../middlewares/authMiddleware")
 const { signup,login,logout,update } = require('../controllers/authController');
-const {createProduct,deleteData,updateProduct} = require ('../controllers/productController')
+const {createProduct,deleteData,updateProduct,readProduct} = require ('../controllers/productController')
 
 
 router.post('/signup',signupvalidation,signup);
@@ -14,5 +14,6 @@ router.put ('/update',update);
 router.post('/upload',createProduct);
 router.delete('/delete',authMiddleware,deleteData);
 router.put('/updateProduct',authMiddleware,updateProduct);
+router.get('/readProducts',authMiddleware,readProduct);
 
 module.exports = router
