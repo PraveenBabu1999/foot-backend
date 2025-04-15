@@ -7,6 +7,8 @@ const { json } = require('body-parser');
 const UserModel = require('../models/users');
 const { object } = require('joi');
 const ObjectId = mongoose.Types.ObjectId;
+const cart = require('../models/cart');
+const Cart = require('../models/cart');
 
 const createProduct = async (req, res) => {
     try {
@@ -160,17 +162,17 @@ const updateProduct = async (req, res) => {
 const readProduct = async (req, res) => {
     try {
 
-        const products = await ProductModel.find({createdBy:req.user._id});
+        const products = await ProductModel.find({ createdBy: req.user._id });
         // console.log(products);
-        
+
 
         if (!products || products.length === 0) {
             return res.status(404).json({ message: "No products found" });
         }
         // console.log(products);
-        
-        return res.status(200).json({ 
-            message: "Get all products successfully.", 
+
+        return res.status(200).json({
+            message: "Get all products successfully.",
             products  // ✅ Include the products in the response
         });
 
@@ -180,22 +182,92 @@ const readProduct = async (req, res) => {
     }
 };
 
-const getAllProducts = async (req,res) =>{
+const getAllProducts = async (req, res) => {
     try {
         const products = await ProductModel.find()
-        console.log("gbhnmk",products)
+        console.log("gbhnmk", products)
 
-    if (!products || products.length === 0) {
-        return res.status(404).json({message:"Products not found"});
-    };
+        if (!products || products.length === 0) {
+            return res.status(404).json({ message: "Products not found" });
+        };
 
-    return res.status(200).json({message:"Get All Products successfully",products})
+        return res.status(200).json({ message: "Get All Products successfully", products })
     } catch (error) {
-        console.log("Internal server error",error)
-        return res.status(500).json({message:"Internal server error!"})
+        console.log("Internal server error", error)
+        return res.status(500).json({ message: "Internal server error!" })
     }
 };
 
+// Add to cart api
+
+const addToCart = async (req, res) => {
+    try {
+      const { productId, quantity } = req.body;
+      const userId = req.user._id;
+  
+      const parsedQuantity = Number(quantity);
+  
+      if (!productId || !parsedQuantity || parsedQuantity <= 0) {
+        return res.status(400).json({ message: 'Valid product ID and quantity are required' });
+      }
+  
+      // ✅ Get product and validate
+      const product = await ProductModel.findById(productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+  
+      // ✅ Defensive check for price
+      const productPrice = Number(product.price);
+      if (!productPrice && productPrice !== 0) {
+        return res.status(500).json({ message: 'Product has no valid price' });
+      }
+  
+      const itemTotal = productPrice * parsedQuantity;
+  
+      // ✅ Find or create cart
+      let cart = await Cart.findOne({ userId });
+  
+      if (!cart) {
+        cart = new Cart({
+          userId,
+          items: [{
+            productId,
+            quantity: parsedQuantity,
+            price: productPrice,
+            total: itemTotal
+          }]
+        });
+      } else {
+        const itemIndex = cart.items.findIndex(
+          item => item.productId.toString() === productId
+        );
+  
+        if (itemIndex > -1) {
+          cart.items[itemIndex].quantity += parsedQuantity;
+          cart.items[itemIndex].total = cart.items[itemIndex].quantity * productPrice;
+          cart.items[itemIndex].price = productPrice; // Ensure price is always set
+        } else {
+          cart.items.push({
+            productId,
+            quantity: parsedQuantity,
+            price: productPrice,
+            total: itemTotal
+          });
+        }
+      }
+  
+      // ✅ Recalculate total
+      cart.cartTotal = cart.items.reduce((sum, item) => sum + item.total, 0);
+  
+      await cart.save();
+      return res.status(200).json({ message: 'Item added to cart', cart });
+  
+    } catch (error) {
+      console.error('Internal server error:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+  };
 
 
-module.exports = { createProduct, deleteData, updateProduct,readProduct,getAllProducts, }
+module.exports = { createProduct, deleteData, updateProduct, readProduct, getAllProducts, addToCart }
