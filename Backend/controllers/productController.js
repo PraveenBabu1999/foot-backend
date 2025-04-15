@@ -203,8 +203,6 @@ const getAllProducts = async (req, res) => {
 const addToCart = async (req, res) => {
     try {
       const { productId, quantity } = req.body;
-      const userId = req.user._id;
-  
       const parsedQuantity = Number(quantity);
   
       if (!productId || !parsedQuantity || parsedQuantity <= 0) {
@@ -217,7 +215,6 @@ const addToCart = async (req, res) => {
         return res.status(404).json({ message: 'Product not found' });
       }
   
-      // ✅ Defensive check for price
       const productPrice = Number(product.price);
       if (!productPrice && productPrice !== 0) {
         return res.status(500).json({ message: 'Product has no valid price' });
@@ -225,12 +222,24 @@ const addToCart = async (req, res) => {
   
       const itemTotal = productPrice * parsedQuantity;
   
+      // ✅ Determine user or guest IP
+      let query = {};
+      let isGuest = false;
+  
+      if (req.user && req.user._id) {
+        query.userId = req.user._id;
+      } else {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        query.guestIp = ip;
+        isGuest = true;
+      }
+  
       // ✅ Find or create cart
-      let cart = await Cart.findOne({ userId });
+      let cart = await Cart.findOne(query);
   
       if (!cart) {
         cart = new Cart({
-          userId,
+          ...query,
           items: [{
             productId,
             quantity: parsedQuantity,
@@ -246,7 +255,7 @@ const addToCart = async (req, res) => {
         if (itemIndex > -1) {
           cart.items[itemIndex].quantity += parsedQuantity;
           cart.items[itemIndex].total = cart.items[itemIndex].quantity * productPrice;
-          cart.items[itemIndex].price = productPrice; // Ensure price is always set
+          cart.items[itemIndex].price = productPrice;
         } else {
           cart.items.push({
             productId,
@@ -261,34 +270,57 @@ const addToCart = async (req, res) => {
       cart.cartTotal = cart.items.reduce((sum, item) => sum + item.total, 0);
   
       await cart.save();
-      return res.status(200).json({ message: 'Item added to cart', cart });
+  
+      return res.status(200).json({
+        message: isGuest ? 'Item added to guest cart' : 'Item added to user cart',
+        cart
+      });
   
     } catch (error) {
       console.error('Internal server error:', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
   };
+  
 
   // create get cart
 
-  const getCart = async (req,res) =>{
+  const getCart = async (req, res) => {
     try {
-        const userId = req.user._id;
-    
-        // Find the cart by userId and populate product info
-        const cart = await Cart.findOne({ userId }).populate('items.productId');
-    
-        if (!cart || cart.items.length === 0) {
-          return res.status(200).json({ message: 'Cart is empty', cart: { items: [], cartTotal: 0 } });
-        }
-    
-        return res.status(200).json({ message: 'Cart fetched successfully', cart });
-    
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-        return res.status(500).json({ message: 'Internal server error' });
+      let query = {};
+      let isGuest = false;
+  
+      if (req.user && req.user._id) {
+        // Logged-in user
+        query.userId = req.user._id;
+      } else {
+        // Guest user - use IP address
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        query.guestIp = ip;
+        isGuest = true;
       }
-  }
+  
+      // Find the cart based on userId or guest IP
+      const cart = await Cart.findOne(query).populate('items.productId');
+  
+      if (!cart || cart.items.length === 0) {
+        return res.status(200).json({
+          message: isGuest ? 'Guest cart is empty' : 'Cart is empty',
+          cart: { items: [], cartTotal: 0 }
+        });
+      }
+  
+      return res.status(200).json({
+        message: isGuest ? 'Guest cart fetched successfully' : 'Cart fetched successfully',
+        cart
+      });
+  
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+  
 
 
 module.exports = { createProduct, deleteData, updateProduct, readProduct, getAllProducts, addToCart,getCart, }
