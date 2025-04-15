@@ -209,37 +209,66 @@ const addToCart = async (req, res) => {
         return res.status(400).json({ message: 'Valid product ID and quantity are required' });
       }
   
-      // ✅ Get product and validate
       const product = await ProductModel.findById(productId);
       if (!product) {
         return res.status(404).json({ message: 'Product not found' });
       }
   
       const productPrice = Number(product.price);
-      if (!productPrice && productPrice !== 0) {
-        return res.status(500).json({ message: 'Product has no valid price' });
-      }
-  
       const itemTotal = productPrice * parsedQuantity;
   
       // ✅ Determine user or guest IP
-      let query = {};
-      let isGuest = false;
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+      let userId = req.user?._id || null;
+      let cart;
   
-      if (req.user && req.user._id) {
-        query.userId = req.user._id;
+      if (userId) {
+        // ✅ Logged-in user — check for guest cart first
+        const guestCart = await Cart.findOne({ guestIp: ip });
+        const userCart = await Cart.findOne({ userId });
+  
+        if (guestCart) {
+          if (userCart) {
+            // Merge guest cart into user cart
+            guestCart.items.forEach(guestItem => {
+              const existingIndex = userCart.items.findIndex(
+                item => item.productId.toString() === guestItem.productId.toString()
+              );
+  
+              if (existingIndex > -1) {
+                userCart.items[existingIndex].quantity += guestItem.quantity;
+                userCart.items[existingIndex].total =
+                  userCart.items[existingIndex].quantity * userCart.items[existingIndex].price;
+              } else {
+                userCart.items.push(guestItem);
+              }
+            });
+  
+            userCart.cartTotal = userCart.items.reduce((sum, item) => sum + item.total, 0);
+            await userCart.save();
+            await guestCart.deleteOne(); // Remove guest cart
+            cart = userCart;
+          } else {
+            // No user cart exists, convert guest cart to user cart
+            guestCart.userId = userId;
+            guestCart.guestIp = null;
+            await guestCart.save();
+            cart = guestCart;
+          }
+        } else {
+          // No guest cart, just use or create user cart
+          cart = await Cart.findOne({ userId });
+        }
       } else {
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        query.guestIp = ip;
-        isGuest = true;
+        // Guest
+        cart = await Cart.findOne({ guestIp: ip });
       }
   
-      // ✅ Find or create cart
-      let cart = await Cart.findOne(query);
-  
+      // ✅ If no cart exists, create new
       if (!cart) {
         cart = new Cart({
-          ...query,
+          userId: userId || null,
+          guestIp: userId ? null : ip,
           items: [{
             productId,
             quantity: parsedQuantity,
@@ -268,11 +297,10 @@ const addToCart = async (req, res) => {
   
       // ✅ Recalculate total
       cart.cartTotal = cart.items.reduce((sum, item) => sum + item.total, 0);
-  
       await cart.save();
   
       return res.status(200).json({
-        message: isGuest ? 'Item added to guest cart' : 'Item added to user cart',
+        message: userId ? 'Item added to user cart' : 'Item added to guest cart',
         cart
       });
   
@@ -282,26 +310,60 @@ const addToCart = async (req, res) => {
     }
   };
   
+  
 
   // create get cart
 
   const getCart = async (req, res) => {
     try {
-      let query = {};
-      let isGuest = false;
+      let userId = req.user?._id || null;
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+      let cart;
+      let isGuest = !userId;
   
-      if (req.user && req.user._id) {
-        // Logged-in user
-        query.userId = req.user._id;
+      if (userId) {
+        // ✅ Logged-in user: check both guest and user carts
+        const guestCart = await Cart.findOne({ guestIp: ip });
+        let userCart = await Cart.findOne({ userId });
+  
+        if (guestCart) {
+          if (userCart) {
+            // ✅ Merge guest cart into user cart
+            guestCart.items.forEach(guestItem => {
+              const existingIndex = userCart.items.findIndex(
+                item => item.productId.toString() === guestItem.productId.toString()
+              );
+  
+              if (existingIndex > -1) {
+                userCart.items[existingIndex].quantity += guestItem.quantity;
+                userCart.items[existingIndex].total =
+                  userCart.items[existingIndex].quantity * userCart.items[existingIndex].price;
+              } else {
+                userCart.items.push(guestItem);
+              }
+            });
+  
+            userCart.cartTotal = userCart.items.reduce((sum, item) => sum + item.total, 0);
+            await userCart.save();
+            await guestCart.deleteOne();
+            cart = userCart;
+          } else {
+            // ✅ No user cart: convert guest cart
+            guestCart.userId = userId;
+            guestCart.guestIp = null;
+            await guestCart.save();
+            cart = guestCart;
+          }
+        } else {
+          // ✅ Only user cart exists
+          cart = await Cart.findOne({ userId });
+        }
+  
+        isGuest = false;
       } else {
-        // Guest user - use IP address
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        query.guestIp = ip;
-        isGuest = true;
+        // ✅ Guest only
+        cart = await Cart.findOne({ guestIp: ip });
       }
-  
-      // Find the cart based on userId or guest IP
-      const cart = await Cart.findOne(query).populate('items.productId');
   
       if (!cart || cart.items.length === 0) {
         return res.status(200).json({
@@ -309,6 +371,8 @@ const addToCart = async (req, res) => {
           cart: { items: [], cartTotal: 0 }
         });
       }
+  
+      await cart.populate('items.productId'); // Ensure products are populated
   
       return res.status(200).json({
         message: isGuest ? 'Guest cart fetched successfully' : 'Cart fetched successfully',
