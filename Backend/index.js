@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require ('cors');
 require ('./models/db')
 const Authrouter = require ('./routes/router')
+const userRouter = require ('./routes/userRoute')
 // const UserSchema = require ('./models/users')
 
 const app = express();
@@ -20,6 +21,7 @@ app.get('/',(req, res) =>{
 });
 
 app.use('/auth',Authrouter);
+app.use('/user',userRouter);
 
 app.listen(PORT,()=>{
     console.log(`Server is running on ${PORT}`);
