@@ -160,14 +160,8 @@ const updateProduct = async (req, res) => {
 const readProduct = async (req, res) => {
     try {
 
-        const userId = req.body;
-        console.log(userId);
-        if (!userId) {
-            return res.status(404).json({message:"User not found"})
-        }
-        
-        const products = await ProductModel.find({createdBy:userId});
-        console.log(products);
+        const products = await ProductModel.find({createdBy:req.user._id});
+        // console.log(products);
         
 
         if (!products || products.length === 0) {
@@ -181,11 +175,27 @@ const readProduct = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Internal server error!', error);
+        // console.error('Internal server error!', error);
         return res.status(500).json({ message: 'Internal Server error!' });
+    }
+};
+
+const getAllProducts = async (req,res) =>{
+    try {
+        const products = await ProductModel.find()
+        console.log("gbhnmk",products)
+
+    if (!products || products.length === 0) {
+        return res.status(404).json({message:"Products not found"});
+    };
+
+    return res.status(200).json({message:"Get All Products successfully",products})
+    } catch (error) {
+        console.log("Internal server error",error)
+        return res.status(500).json({message:"Internal server error!"})
     }
 };
 
 
 
-module.exports = { createProduct, deleteData, updateProduct,readProduct }
+module.exports = { createProduct, deleteData, updateProduct,readProduct,getAllProducts, }
