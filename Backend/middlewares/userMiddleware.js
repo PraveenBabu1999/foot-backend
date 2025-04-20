@@ -14,7 +14,7 @@ const userMiddleware = async (req, res, next) => {
 
                 // ✅ Get user ID from token
                 const userId = decoded || decoded._id;
-                console.log('Authenticated user ID:', userId);
+                // console.log('Authenticated user ID:', userId);
 
             } catch (tokenErr) {
                 console.warn('Invalid token. Proceeding as guest.');
@@ -23,7 +23,7 @@ const userMiddleware = async (req, res, next) => {
         } else {
             // ✅ No token: user is guest — get IP address
             const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-            console.log('Guest User IP:', ip);
+            // console.log('Guest User IP:', ip);
 
             req.user = null;
         }

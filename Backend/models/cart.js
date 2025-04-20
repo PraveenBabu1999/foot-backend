@@ -14,6 +14,11 @@ const CartItemSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: true
+  },
+  total: {
+    type: Number,
+    required: true,
+    default: 0
   }
 }, { _id: false });
 
@@ -21,12 +26,25 @@ const CartSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    unique: true
+    unique: true,
+    sparse: true // Allows either userId or guestIp
+  },
+  guestIp: {
+    type: String,
+    unique: true,
+    sparse: true // So Mongo allows multiple nulls
   },
   items: {
     type: [CartItemSchema],
     default: []
+  },
+  cartTotal: {
+    type: Number,
+    default: 0
+  },
+  totalPrice: {
+    type: Number,
+    default: 0
   },
   updatedAt: {
     type: Date,
