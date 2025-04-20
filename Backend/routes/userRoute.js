@@ -3,16 +3,18 @@ const router = express();
 const {userMiddleware} = require ('../middlewares/userMiddleware');
 const {authMiddleware} = require ('../middlewares/authMiddleware');
 const {Middleware} = require ('../middlewares/Middleware');
-const {getAllProducts,addToCart,getCart,} = require ('../controllers/productController')
-const {checkout, userAddress,updateAddress} = require ('../controllers/userController')
+const {getAllProducts} = require ('../controllers/productController');
+const { userAddress,updateAddress} = require ('../controllers/userController');
+const {checkout} = require('../controllers/checkout');
+const {addToCart,getCart,} = require ('../controllers/CartControllers');
 
 
 router.get('/allProducts',userMiddleware,getAllProducts);
 router.post('/aadToCart',userMiddleware,addToCart);
 router.get('/cart',userMiddleware,getCart);
-router.get('/checkout',authMiddleware, checkout);
 router.post('/userAddress',Middleware,userAddress);
-router.post('/updateAddress',Middleware,updateAddress)
+router.post('/updateAddress',Middleware,updateAddress);
+router.post('/checkout',Middleware, checkout);
 
 
 

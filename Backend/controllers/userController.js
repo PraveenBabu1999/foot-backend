@@ -11,30 +11,7 @@ const cart = require('../models/cart');
 const Cart = require('../models/cart');
 const UserAddress = require ('../models/UserAddress')
 
-const checkout = async (req, res) => {
-    try {
-      if (!req.user || !req.user._id) {
-        return res.status(401).json({ message: 'Unauthorized. Please login to proceed to checkout.' });
-      }
-  
-      const userId = req.user._id;
-  
-      //  Fetch user's cart
-      const cart = await Cart.findOne({ userId }).populate('items.productId');
-      if (!cart || cart.items.length === 0) {
-        return res.status(400).json({ message: 'Your cart is empty' });
-      }
-  
-      
-      // Placeholder response
-      return res.status(200).json({ message: 'Checkout successful', cart });
-  
-    } catch (error) {
-      console.error('Checkout error:', error);
-      return res.status(500).json({ message: 'Internal server error' });
-    };
-  };
-  
+
   const userAddress = async (req,res) =>{
     try {
       console.log('Logged-in user:', req.user); // ✅ Debug line
@@ -119,4 +96,4 @@ const checkout = async (req, res) => {
   
 
 
-module.exports = {checkout,userAddress,updateAddress}
+module.exports = {userAddress,updateAddress}

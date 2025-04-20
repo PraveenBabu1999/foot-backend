@@ -14,8 +14,8 @@ const Middleware = async (req, res,next) =>{
             return res.status(401).json({message:'unauthorized, Token no provided'});
         }
         const decoded = jwt.verify(token,process.env.JWT_SECRET)
-        req.user = {id: decoded}
-        // console.log(user_id);
+        req.user = { id: decoded.id };
+        console.log(req.user);
         next();
     } catch (error) {
         console.error("Internal server error!",error);
