@@ -4,7 +4,7 @@ const {userMiddleware} = require ('../middlewares/userMiddleware');
 const {authMiddleware} = require ('../middlewares/authMiddleware');
 const {Middleware} = require ('../middlewares/Middleware');
 const {getAllProducts} = require ('../controllers/productController');
-const { userAddress,updateAddress} = require ('../controllers/userController');
+const { userAddress,updateAddress,getAddress,deleteAddress} = require ('../controllers/addressController');
 const {checkout} = require('../controllers/checkout');
 const {addToCart,getCart,increaseQuantity,updateQuantity,decreaseQuantity,removeCart,removeAllCart} = require ('../controllers/CartControllers');
 
@@ -18,7 +18,9 @@ router.delete('/remove/cart',userMiddleware,removeCart);
 router.delete('/remove/allCart',userMiddleware,removeAllCart);
 router.post('/update-quantity',userMiddleware,updateQuantity)
 router.post('/userAddress',Middleware,userAddress);
-router.post('/updateAddress',Middleware,updateAddress);
+router.put('/updateAddress/:id',Middleware,updateAddress);
+router.get('/get/address',Middleware,getAddress)
+router.delete('/delete/address/:id',Middleware,deleteAddress)
 router.post('/checkout',Middleware, checkout);
 
 
