@@ -15,7 +15,7 @@ const Middleware = async (req, res, next) => {
 
         // Save both userId and addressId from token
         req.user = {
-            id: decoded._id,
+            id: decoded._id || decoded,
             addressId: decoded.addressId // 👈 added addressId to req.user
         };
 

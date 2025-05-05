@@ -7,6 +7,7 @@ const {getAllProducts} = require ('../controllers/productController');
 const { userAddress,updateAddress,getAddress,deleteAddress} = require ('../controllers/addressController');
 const {checkout} = require('../controllers/checkout');
 const {addToCart,getCart,increaseQuantity,updateQuantity,decreaseQuantity,removeCart,removeAllCart} = require ('../controllers/CartControllers');
+const {postReviews,getReviews,updateReviews,deleteReviews} = require('../controllers/reviews');
 
 
 router.get('/allProducts',userMiddleware,getAllProducts);
@@ -20,8 +21,12 @@ router.post('/update-quantity',userMiddleware,updateQuantity)
 router.post('/userAddress',Middleware,userAddress);
 router.put('/updateAddress/:id',Middleware,updateAddress);
 router.get('/get/address',Middleware,getAddress)
-router.delete('/delete/address/:id',Middleware,deleteAddress)
+router.delete('/delete/address/:id',Middleware,deleteAddress);
 router.post('/checkout',Middleware, checkout);
+router.post('/reviews/:productId',userMiddleware,postReviews);
+router.get('/reviews/:productId',userMiddleware, getReviews);
+router.put('/update/reviews/:productId',userMiddleware,updateReviews);
+router.delete('/delete/reviews/:productId',userMiddleware,deleteReviews)
 
 
 
