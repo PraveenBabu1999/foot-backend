@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000
 
 app.use(bodyParser.json())
 app.use(cors({
-    origin: "http://localhost:4000", // Allow requests only from frontend
+    origin: "http://localhost:3000", // Allow requests only from frontend
     credentials: true, // Allow cookies & authentication headers
 }));
 

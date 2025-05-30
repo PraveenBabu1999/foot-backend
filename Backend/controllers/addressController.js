@@ -12,50 +12,37 @@ const Cart = require('../models/cart');
 const UserAddress = require ('../models/UserAddress')
 
 
-const userAddress = async (req, res) => {
-  try {
-    const { fullName, phone, address, city, state, postalCode, country } = req.body;
-    const userId = req.user.id;
-
-    if (!userId || !fullName || !phone || !address || !city || !postalCode || !country) {
-      return res.status(400).json({ message: 'All fields are required' });
+ const userAddress = async (req,res) =>{
+    try {
+      console.log('Logged-in user:', req.user); // ✅ Debug line
+  
+      const { fullName, phone, address, city, state, postalCode, country } = req.body;
+      const userId = req.user.id;
+  
+      if (!userId || !fullName || !phone || !address || !city || !postalCode || !country) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+  
+      const newAddress = new UserAddress({
+        userId,
+        fullName,
+        phone,
+        address,
+        city,
+        state,
+        postalCode,
+        country,
+      });
+  
+      await newAddress.save();
+  
+      res.status(201).json({ message: 'Address added successfully', address: newAddress });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
     }
-
-    const newAddress = new UserAddress({
-      userId,
-      fullName,
-      phone,
-      address,
-      city,
-      state,
-      postalCode,
-      country,
-    });
-
-    await newAddress.save();
-
-    // 🔐 Generate new token with addressId
-    const token = jwt.sign(
-      {
-        _id: userId,
-        addressId: newAddress._id // Save addressId in token
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    // Send the token with the response
-    res.status(201).json({
-      message: 'Address added successfully',
-      address: newAddress,
-      token, // Return the new token
-    });
-
-  } catch (error) {
-    // console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+  };
+  
   //update user address
 
   const updateAddress = async (req, res) => {

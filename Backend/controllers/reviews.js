@@ -41,16 +41,15 @@ const postReviews = async (req, res) => {
     res.status(500).json({ message: 'Failed to post review', error });
   }
 };
+// ✅ Ensure User model is registered
 
-// const Reviews = require('../models/Review');
-
-// GET /api/reviews/:productId
 const getReviews = async (req, res) => {
   try {
     const productId = req.params.productId;
+    console.log('bm',productId)
 
     const reviews = await Review.find({ product: productId })
-      .populate('user') // ✅ lowercase 'user'
+      .populate('user') // ✅ Populate user details
       .sort({ createdAt: -1 });
 
     res.status(200).json(reviews);
@@ -59,6 +58,7 @@ const getReviews = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch reviews', error });
   }
 };
+
 
 //update review api
 
